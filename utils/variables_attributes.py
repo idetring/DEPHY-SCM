@@ -24,15 +24,20 @@ attributes = OrderedDict([
         ('ri',       {'name': 'cloud_ice_water_mixing_ratio',               'units': '1', 'plotcoef': 1000., 'plotunits': 'g kg-1'}),        
         ('tke',      {'name': 'specific_turbulent_kinetic_energy',          'units': 'm2 s-2'}),
         ('hur',      {'name': 'relative_humidity',                          'units': '%'}),
+        ('exner',    {'name': 'exner_pressure',                             'units': '1'}),
         # Surface
         ('ts',    {'name': 'surface_temperature',                  'units': 'K'}),
         ('mrsos', {'name': 'mass_content_of_water_in_soil_layer',  'units': 'kg m-2'}),
+        # Soil
+        ('tso', {'name':'soil_temperature','units':'K'}),
+        ('wso', {'name':'soil_water_content','units':''}),
         ###########################
         # Forcing
         ###########################
         # General
         ('lat',     {'name': 'latitude',                     'units': 'degrees_north'}),
         ('lon',     {'name': 'longitude',                    'units': 'degrees_east'}),
+        ('dep',     {'name': 'depth',                        'units': 'm'}),
         ('ps_forc', {'name': 'forcing_surface_air_pressure', 'units': 'Pa', 'plotcoef': 0.01,  'plotunits': 'hPa'}),
         ('zh_forc', {'name': 'forcing_height',               'units': 'm',  'plotcoef': 0.001, 'plotunits': 'km'}),
         ('pa_forc', {'name': 'forcing_air_pressure',         'units': 'Pa', 'plotcoef': 0.01,  'plotunits': 'hPa'}),

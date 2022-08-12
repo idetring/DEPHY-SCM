@@ -94,6 +94,10 @@ cases.append(case)
 subcases[case] = ['NSA3A','NSA3A_D1','NSA3A_MJO1']
 
 ####################################
+#### FESSTVaL Cold Pool Case
+case = 'FESSTVaL'
+cases.append(case)
+subcases[case] = ['2021062900']
 
 def available(case=None):
     """

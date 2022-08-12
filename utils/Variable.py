@@ -27,7 +27,7 @@ class Variable:
     def __init__(self, varid, data=None, name=None, units=None,
             height=None, height_id=None, height_units=None,
             pressure=None, pressure_id=None, pressure_units=None,
-            level=None, time=None, lat=None, lon=None,
+            level=None, depth=None, time=None, lat=None, lon=None,
             axlist=None, axes=None,
             plotcoef=1., plotunits=None):
 
@@ -46,8 +46,9 @@ class Variable:
 
             self.time = time
             self.level = level
+            self.depth = depth
 
-            for ax in ['time','level']:
+            for ax in ['time','level','depth']:
                 if not(self.__dict__[ax] is None):
                     self.axes.append(self.__dict__[ax])
                     self.axlist.append(self.__dict__[ax].id)
@@ -62,6 +63,8 @@ class Variable:
                 if ax.id == 't0' or ax.id[0:4] == 'time':
                     self.time = ax
                 elif ax.id[0:3] == 'lev' or ax.id == 'nlev':
+                    self.level = ax
+                elif ax.id[0:3] == 'dep':
                     self.level = ax
                 else:
                     logger.error('Axis unexpected: {0}'.format(ax.id))
@@ -148,6 +151,9 @@ class Variable:
                 if ax.id[0:3] == 'lev':
                     newaxlist.append(lev.id)
                     newaxes.append(lev)
+                elif ax.id[0:3] == 'dep':
+                    newaxlist.append(lev.id)
+                    newaxes.append(lev)
                 else:
                     newaxlist.append(ax.id)
                     newaxes.append(ax)
@@ -160,9 +166,8 @@ class Variable:
 
         lvert = False
         for ax in self.axes:
-            if ax.id[0:3] == 'lev':
+            if ax.id[0:3] == 'lev' or ax.id[0:3] == 'dep':
                 lvert = True
-
 
         if write_time_axes:
             for ax in self.axes:
@@ -171,7 +176,7 @@ class Variable:
 
         if write_level_axes and lvert:
             for ax in self.axes:
-                if ax.id[0:3] == 'lev':
+                if ax.id[0:3] == 'lev' or ax.id[0:3] == 'dep':
                     ax.write(filein)
 
         if write_data:

@@ -16,11 +16,14 @@ import available_cases as AA
 # Current directory
 cwd = os.getcwd()
 
-for case in AA.cases:
+#for case in AA.cases:
+for case in ['FESSTVaL',]:
     for subcase in AA.subcases[case]:
         print("#"*60)
         print("CASE: {0}, SUBCASE: {1}".format(case,subcase))
         tmp = os.path.join(cwd,case,subcase)
+        if case == 'FESSTVaL':
+            tmp = os.path.join(cwd,case)
         os.chdir(tmp)
 
         try:
@@ -28,9 +31,12 @@ for case in AA.cases:
         except:
             pass
 
-        cmd = "python driver_DEF.py"
+        subcasedate = ''
+        if case == 'FESSTVaL':
+            subcasedate = subcase
+        cmd = f"python3 driver_DEF.py {subcasedate}"
         os.system(cmd)
-        cmd = "python driver_SCM.py"
+        cmd = f"python3 driver_SCM.py {subcasedate}"
         os.system(cmd)
 
         #try:

@@ -57,6 +57,7 @@ class Case:
 
         # Variables
         self.var_init_list = []
+        self.var_soil_list = []
         self.var_forcing_list = []
         self.variables = {}
 
@@ -199,7 +200,7 @@ class Case:
 
     def add_variable(self, varid, vardata, name=None, units=None,
             lev=None, levtype=None, levid=None,
-            height=None, pressure=None,
+            height=None, pressure=None,depth=None,
             time=None, timeid=None):
         """Add a variable to a Case object.
             
@@ -213,6 +214,7 @@ class Case:
         levid   -- string for the level axis id. The default is None, which implies a generic id (default None)
         height  -- variable object describing height for current variable
         pressure-- variable object describing pressure for current variable
+        depth   -- variable object describing depth for curren variable
         time    -- input data for the time axis, as a list, a numpy array or an Axis object (default None)
         timeid  -- string for the time axis id. The default is None, which implies a generic id (default None)
         name    -- string of the name attribute of the variable (to be use as long_name in a netCDF file) (default None)
@@ -227,6 +229,8 @@ class Case:
         else:
             if varid in ['ps','zh','pa','ua','va','ta','theta','thetal','qv','qt','rv','rt','rl','ri','ql','qi','tke','ts']:
                 self.var_init_list.append(varid)
+            elif varid in ['tso','wso','dep']:
+                self.var_soil_list.append(varid)
             else:
                 self.var_forcing_list.append(varid)
         #print varid, name, lev, time
@@ -268,9 +272,12 @@ class Case:
             elif levtype == 'pressure':
                 levunits = 'Pa'
                 lev_name = 'air_pressure_for_{0}'.format(varid)
+            elif levtype == 'depth':
+                levunits = 'm'
+                lev_name = 'depth_for_{0}'.format(varid)
             else:
                 logger.error('levtype unexpected: {0}'.format(levtype))
-                logger.error('levtype should be defined for variable {0} and given as altitude or pressure'.format(varid))
+                logger.error('levtype should be defined for variable {0} and given as altitude, pressure or depth'.format(varid))
                 raise ValueError('levtype unexpected: {0}'.format(levtype))
 
             if levid is None:
@@ -295,6 +302,11 @@ class Case:
                     pressure = np.tile(levdata,(nt,1))
                     pressure_id = 'pa_{0}'.format(varid)
                     pressure_units = 'Pa'
+            elif levtype == 'depth':
+                if depth is None:
+                    depth = np.tile(levdata,(nt,1))
+                    depth_id = 'dep_{0}'.format(varid)
+                    depth_units = 'm'
 
         ######################
         # Get variable attributes
@@ -1419,7 +1431,7 @@ class Case:
      
         print("######################")
         print("# Variable information")
-        for var in self.var_init_list + self.var_forcing_list:
+        for var in self.var_init_list + self.var_soil_list + self.var_forcing_list:
             self.variables[var].info()
 
 ###################################################################################################
@@ -1436,12 +1448,14 @@ class Case:
         then altitude/pressure variables 
         and finally the variables themselves.
         """
-
+        import os,pathlib
+        filedir = os.path.dirname(fileout)
+        pathlib.Path(filedir).mkdir(exist_ok=True,parents=True)
         g = nc.Dataset(fileout,'w',format='NETCDF3_CLASSIC')
 
         # Writing first only time axes
         for var in var_attributes.keys():
-            if var in self.var_init_list + self.var_forcing_list:
+            if var in self.var_init_list + self.var_forcing_list + self.var_soil_list:
                 logger.debug('Writing time axis for {0}'.format(var))
                 self.variables[var].write(g,
                         write_time_axes=True, write_level_axes=False,
@@ -1449,7 +1463,7 @@ class Case:
 
         # Writing first only level axes
         for var in var_attributes.keys():
-            if var in self.var_init_list + self.var_forcing_list:
+            if var in self.var_init_list + self.var_forcing_list + self.var_soil_list:
                 logger.debug('Writing level axis for {0}'.format(var))
                 self.variables[var].write(g,
                         write_time_axes=False, write_level_axes=True,
@@ -1457,7 +1471,7 @@ class Case:
 
         # Writing then only vertical variables
         for var in var_attributes.keys():
-            if var in self.var_init_list + self.var_forcing_list:
+            if var in self.var_init_list + self.var_forcing_list + self.var_soil_list:
                 logger.debug('Writing vertical variable for {0}'.format(var))
                 self.variables[var].write(g, 
                         write_time_axes=False, write_level_axes=False,
@@ -1465,7 +1479,7 @@ class Case:
 
         # Finally write data
         for var in var_attributes.keys():
-            if var in self.var_init_list + self.var_forcing_list:
+            if var in self.var_init_list + self.var_forcing_list + self.var_soil_list:
                 logger.debug('Writing data for {0}'.format(var))
                 self.variables[var].write(g,
                         write_time_axes=False, write_level_axes=False,
@@ -2010,7 +2024,7 @@ class Case:
 
         if time is None:
             logger.warning('No time interpolation')
-            for var in self.var_init_list + self.var_forcing_list:
+            for var in self.var_init_list + self.var_forcing_list + self.var_soil_list:
                 VV = self.variables[var]
                 dataout[var] = Variable(var, data=VV.data, name=VV.name, units=VV.units,
                         height=VV.height, pressure=VV.pressure,
@@ -2020,7 +2034,7 @@ class Case:
                     dataout[var].time.id = 'time'
         else:
             timeout = Axis('time',time,name='forcing_time',units=self.tunits, calendar='gregorian')
-            for var in self.var_init_list + self.var_forcing_list:
+            for var in self.var_init_list + self.var_forcing_list + self.var_soil_list:
                 VV = self.variables[var]
                 if VV.time is not self.t0Axis:
                     dataout[var] = VV.interpol_time(time=timeout)
@@ -2032,7 +2046,7 @@ class Case:
 
         if lev is None:
             logger.warning('No vertical interpolation')
-            for var in self.var_init_list:
+            for var in self.var_init_list + self.var_soil_list:
                 VV = dataout[var]
 
                 if VV.level is not None:
@@ -2046,6 +2060,7 @@ class Case:
 
                     height = None
                     pressure = None
+                    depth = None
 
                     if VV.height is not None:
                         height = Variable('zh', data=VV.height.data, units=VV.height.units, name='height',
@@ -2053,10 +2068,13 @@ class Case:
                     if VV.pressure is not None:
                         pressure = Variable('pa', data=VV.pressure.data, units=VV.pressure.units, name='air_pressure',
                                 level=levout, time=self.t0Axis)
+                    if VV.depth is not None:
+                        depth = Variable('dep', data=VV.height.data, units=VV.height.units, name='height',
+                                level=levout, time=self.t0Axis)                
 
                         
                     dataout[var] = Variable(var, data=VV.data, name=VV.name, units=VV.units,
-                            height=height, pressure=pressure,
+                            height=height, pressure=pressure, depth = depth,
                             level=VV.level, time=self.t0Axis,
                             plotcoef=VV.plotcoef, plotunits=VV.plotunits)
                 else:
@@ -2122,6 +2140,18 @@ class Case:
                         dataout[var].height.name = 'height_forcing'
                         dataout[var].set_coordinates('time','zh_forc','lat','lon')
                         dataout[var].height.set_coordinates('time','zh_forc','lat','lon')
+                    
+            elif levtype == 'depth':
+                levout = Axis('dep',lev,name='depth_soil',units='m')
+                for var in self.var_soil_list:
+                    VV = dataout[var]
+                    dataout[var] = VV.interpol_vert(height=lev)
+                    if dataout[var].level is not None:
+                        dataout[var].set_level(lev=levout)
+                        dataout[var].height.id = 'dep'
+                        dataout[var].height.name = 'depth_soil'
+                        dataout[var].set_coordinates('time','dep','lat','lon')
+                        dataout[var].height.set_coordinates('time','dep','lat','lon')                      
 
             elif levtype == 'pressure':
 
@@ -2140,6 +2170,10 @@ class Case:
 
         for var in self.var_forcing_list:
             newcase.var_forcing_list.append(var)
+            newcase.variables[var] = dataout[var]
+
+        for var in self.var_soil_list:
+            newcase.var_soil_list.append(var)
             newcase.variables[var] = dataout[var]
 
         return newcase
